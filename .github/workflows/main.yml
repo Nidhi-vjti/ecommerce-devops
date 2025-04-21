@@ -1,0 +1,49 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install Dependencies (Frontend)
+      run: |
+        cd src/frontend
+        npm install
+
+    - name: Install Dependencies (Backend)
+      run: |
+        cd src/backend
+        npm install
+
+    - name: Run Tests
+      run: |
+        npm install selenium-webdriver
+        node selenium-tests/test_login.js
+
+    - name: Build Docker Image
+      run: docker build -t ecommerce-app .
+
+    - name: Push to DockerHub
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+        docker tag ecommerce-app $DOCKER_USERNAME/ecommerce-app:latest
+        docker push $DOCKER_USERNAME/ecommerce-app:latest
